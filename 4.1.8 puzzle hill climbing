@@ -1,0 +1,283 @@
+import random
+
+
+class Node:
+    def __init__(self, fn, state, parent):
+        self.fn = fn
+        self.state = state
+        self.parent = parent
+
+
+class Priority:
+    preState = None  # Add this attribute to the Priority class
+
+    @staticmethod
+    def sort(nodeArray):
+        if Priority.preState is not None:
+            nodeArray = Priority.getParentRemovedNodeArray(nodeArray, Priority.preState)
+
+        for i in range(len(nodeArray)):
+            for j in range(len(nodeArray) - 1, i, -1):
+                if nodeArray[j].fn < nodeArray[j - 1].fn:
+                    nodeArray[j], nodeArray[j - 1] = nodeArray[j - 1], nodeArray[j]
+
+        Priority.neighbors_nodeArray = nodeArray
+        return nodeArray[0]
+
+    @staticmethod
+    def getParentRemovedNodeArray(nodeArray, preState):
+        parentRemovedNodeArray = [None] * (len(nodeArray) - 1)
+        j = 0
+        for i in range(len(nodeArray)):
+            if nodeArray[i].state == preState:
+                continue
+            parentRemovedNodeArray[j] = nodeArray[i]
+            j += 1
+        return parentRemovedNodeArray
+
+
+
+class EightPuzzle:
+    def __init__(self):
+        self.goal_state = [
+            [1, 2, 3],
+            [8, 0, 4],
+            [7, 6, 5]
+        ]
+        self.game_board = [
+            [2, 6, 3],
+            [1, 0, 4],
+            [8, 7, 5]
+        ]
+        self.emptyTile_row = 0
+        self.emptyTile_col = 0
+        self.stepCounter = 0
+        self.min_fn = self.get_fn(self.game_board)
+        self.min_fn_node = None
+        self.random = random.Random()
+        self.stack_state = []
+
+    def initializations(self, max_steps=1000):
+        self.locateEmptyTilePosition()
+        print("=========================================")
+        self.printState(self.game_board, "Initial problem state")
+        print("Initial empty tile position:", self.emptyTile_row, ",", self.emptyTile_col)
+        print("Initial fn (number of misplaced tiles):", self.min_fn)
+        print("=========================================")
+
+        try:
+            self.hill_climbing_search(max_steps)
+        except Exception as e:
+            print("Goal cannot be reached. Found closest solution state.")
+            self.printState(self.min_fn_node.state, "Solution state with min fn " + str(self.min_fn))
+
+
+    def hill_climbing_search(self, max_steps):
+        while self.stepCounter < max_steps:
+            print(">=========================================<")
+            print("Cost/steps:", self.stepCounter)
+            print()
+            
+            lowestPossible_fn_node = self.getLowestPossible_fn_node()
+            self.addToStackState(Priority.neighbors_nodeArray)
+            self.printState(lowestPossible_fn_node.state, "New state")
+
+            fnCounter = 1
+            for i in range(1, len(Priority.neighbors_nodeArray)):
+                if Priority.neighbors_nodeArray[i - 1].fn == Priority.neighbors_nodeArray[i].fn:
+                    fnCounter += 1
+
+            if len(Priority.neighbors_nodeArray) != 1 and fnCounter == len(Priority.neighbors_nodeArray):
+                print("---Fn's are equal, found in local maxima---")
+                for i in range(len(Priority.neighbors_nodeArray)):
+                    if self.stack_state:
+                        print("Pop", i + 1)
+                        self.stack_state.pop()
+                    else:
+                        print("Empty stack inside loop")
+
+                if self.stack_state:
+                    gameNode = self.stack_state.pop()
+                    self.game_board = gameNode.state
+                    Priority.preState = gameNode.parent
+                    self.locateEmptyTilePosition()
+                    self.printState(self.game_board, "Popped state from all equal fn")
+                    print("Empty tile position:", self.emptyTile_row, ",", self.emptyTile_col)
+                else:
+                    print("Stack empty inside first local maxima check")
+            else:
+                print("Lowest fn:", lowestPossible_fn_node.fn)
+                if lowestPossible_fn_node.fn == 0:
+                    print()
+                    print("8-Puzzle has been solved!")
+                    print()
+                    print("Total cost/steps to reach the goal:", self.stepCounter)
+                    print()
+                    break
+
+                if lowestPossible_fn_node.fn <= self.min_fn:
+                    self.min_fn = lowestPossible_fn_node.fn
+                    self.min_fn_node = lowestPossible_fn_node
+                    if self.stack_state:
+                        gameNode = self.stack_state.pop()
+                        self.game_board = gameNode.state
+                        Priority.preState = gameNode.parent
+                        self.locateEmptyTilePosition()
+                        self.printState(self.game_board, "New state as going deeper")
+                        print("Empty tile position:", self.emptyTile_row, ",", self.emptyTile_col)
+                    else:
+                        print("Stack empty")
+                else:
+                    print("---Stuck in local maxima---")
+                    print("Getting higher, not possible")
+                    for i in range(len(Priority.neighbors_nodeArray)):
+                        if self.stack_state:
+                            self.stack_state.pop()
+                        else:
+                            print("Empty stack inside loop")
+
+                    if self.stack_state:
+                        gameNode = self.stack_state.pop()
+                        self.game_board = gameNode.state
+                        Priority.preState = gameNode.parent
+                        self.locateEmptyTilePosition()
+                        self.printState(self.game_board, "Popped state from getting higher")
+                        print("Empty tile position:", self.emptyTile_row, ",", self.emptyTile_col)
+                    else:
+                        print("Stack empty inside second local maxima check")
+
+    def getLowestPossible_fn_node(self):
+        if self.emptyTile_row == 0 and self.emptyTile_col == 0:
+            fn_array = [self.get_fn_down(), self.get_fn_right()]
+            lowest_fn_node = Priority.sort(fn_array)
+            return lowest_fn_node
+        elif self.emptyTile_row == 0 and self.emptyTile_col == 1:
+            fn_array = [self.get_fn_left(), self.get_fn_down(), self.get_fn_right()]
+            lowest_fn_node = Priority.sort(fn_array)
+            return lowest_fn_node
+        elif self.emptyTile_row == 0 and self.emptyTile_col == 2:
+            fn_array = [self.get_fn_left(), self.get_fn_down()]
+            lowest_fn_node = Priority.sort(fn_array)
+            return lowest_fn_node
+        elif self.emptyTile_row == 1 and self.emptyTile_col == 0:
+            fn_array = [self.get_fn_down(), self.get_fn_right(), self.get_fn_up()]
+            lowest_fn_node = Priority.sort(fn_array)
+            return lowest_fn_node
+        elif self.emptyTile_row == 1 and self.emptyTile_col == 1:
+            fn_array = [self.get_fn_left(), self.get_fn_down(), self.get_fn_right(), self.get_fn_up()]
+            lowest_fn_node = Priority.sort(fn_array)
+            return lowest_fn_node
+        elif self.emptyTile_row == 1 and self.emptyTile_col == 2:
+            fn_array = [self.get_fn_left(), self.get_fn_down(), self.get_fn_up()]
+            lowest_fn_node = Priority.sort(fn_array)
+            return lowest_fn_node
+        elif self.emptyTile_row == 2 and self.emptyTile_col == 0:
+            fn_array = [self.get_fn_right(), self.get_fn_up()]
+            lowest_fn_node = Priority.sort(fn_array)
+            return lowest_fn_node
+        elif self.emptyTile_row == 2 and self.emptyTile_col == 1:
+            fn_array = [self.get_fn_left(), self.get_fn_right(), self.get_fn_up()]
+            lowest_fn_node = Priority.sort(fn_array)
+            return lowest_fn_node
+        elif self.emptyTile_row == 2 and self.emptyTile_col == 2:
+            fn_array = [self.get_fn_left(), self.get_fn_up()]
+            lowest_fn_node = Priority.sort(fn_array)
+            return lowest_fn_node
+        return None
+
+    def get_fn_left(self):
+        left_state = [[0] * len(self.game_board[0]) for _ in range(len(self.game_board))]
+
+        for i in range(len(self.game_board)):
+            for j in range(len(self.game_board[0])):
+                if i == self.emptyTile_row and j == self.emptyTile_col:
+                    left_state[i][j] = self.game_board[i][j - 1]
+                    left_state[i][j - 1] = self.game_board[i][j]
+                else:
+                    left_state[i][j] = self.game_board[i][j]
+
+        self.printState(left_state, "Left state")
+        node = Node(self.get_fn(left_state), left_state, self.game_board)
+        return node
+
+    def get_fn_right(self):
+        right_state = [[0] * len(self.game_board[0]) for _ in range(len(self.game_board))]
+
+        for i in range(len(self.game_board)):
+            for j in range(len(self.game_board[0])):
+                if i == self.emptyTile_row and j == self.emptyTile_col:
+                    right_state[i][j] = self.game_board[i][j + 1]
+                    right_state[i][j + 1] = self.game_board[i][j]
+                    j += 1
+                else:
+                    right_state[i][j] = self.game_board[i][j]
+
+        self.printState(right_state, "Right state")
+        node = Node(self.get_fn(right_state), right_state, self.game_board)
+        return node
+
+    def get_fn_up(self):
+        up_state = [[0] * len(self.game_board[0]) for _ in range(len(self.game_board))]
+
+        for i in range(len(self.game_board)):
+            for j in range(len(self.game_board[0])):
+                if i == self.emptyTile_row and j == self.emptyTile_col:
+                    up_state[i][j] = self.game_board[i - 1][j]
+                    up_state[i - 1][j] = self.game_board[i][j]
+                else:
+                    up_state[i][j] = self.game_board[i][j]
+
+        self.printState(up_state, "Up state")
+        node = Node(self.get_fn(up_state), up_state, self.game_board)
+        return node
+
+    def get_fn_down(self):
+        down_state = [[0] * len(self.game_board[0]) for _ in range(len(self.game_board))]
+
+        for i in range(len(self.game_board)):
+            for j in range(len(self.game_board[0])):
+                if i - 1 == self.emptyTile_row and j == self.emptyTile_col:
+                    down_state[i][j] = self.game_board[i - 1][j]
+                    down_state[i - 1][j] = self.game_board[i][j]
+                else:
+                    down_state[i][j] = self.game_board[i][j]
+
+        self.printState(down_state, "Down state")
+        node = Node(self.get_fn(down_state), down_state, self.game_board)
+        return node
+
+    def get_fn(self, game_state):
+        fn_count = 0
+        for i in range(len(game_state)):
+            for j in range(len(game_state[0])):
+                if game_state[i][j] != self.goal_state[i][j] and game_state[i][j] != 0:
+                    fn_count += 1
+        return fn_count
+
+    def addToStackState(self, nodeArray):
+        for i in range(len(nodeArray) - 1, -1, -1):
+            self.stack_state.append(nodeArray[i])
+
+    def locateEmptyTilePosition(self):
+        for i in range(len(self.game_board)):
+            for j in range(len(self.game_board[0])):
+                if self.game_board[i][j] == 0:
+                    self.emptyTile_row = i
+                    self.emptyTile_col = j
+                    return
+
+    def printState(self, state, message):
+        print(message)
+        for i in range(len(state)):
+            print(" ".join(map(str, state[i])))
+        print()
+
+
+# Main function to run the 8-Puzzle solver
+def main():
+    eight_puzzle = EightPuzzle()
+    eight_puzzle.initializations(max_steps=1000)  # You can specify the maximum number of steps here
+
+
+if __name__ == "__main__":
+    main()
