@@ -1,0 +1,92 @@
+class TSP:
+    def __init__(self):
+        self.n = 0
+        self.weight = []
+        self.tour = []
+        self.finalCost = 0
+        self.INF = 1000
+        self.eval()
+
+    def input_weight(self):
+        self.n = int(input("Enter no. of nodes: "))
+        self.weight = [[0 for _ in range(self.n)] for _ in range(self.n)]
+        self.tour = [0 for _ in range(self.n - 1)]
+        for i in range(self.n):
+            for j in range(self.n):
+                if i != j:
+                    self.weight[i][j] = int(input(f"Enter weight of {i + 1} to {j + 1}: "))
+
+    def COST(self, current_node, input_set, set_size):
+        if set_size == 0:
+            return self.weight[current_node][0]
+        min_cost = self.INF
+        min_index = 0
+        set_to_be_passed = [0 for _ in range(self.n - 1)]
+
+        for i in range(set_size):
+            k = 0
+            for j in range(set_size):
+                if input_set[i] != input_set[j]:
+                    set_to_be_passed[k] = input_set[j]
+                    k += 1
+            temp = self.COST(input_set[i], set_to_be_passed, set_size - 1)
+            if (self.weight[current_node][input_set[i]] + temp) < min_cost:
+                min_cost = self.weight[current_node][input_set[i]] + temp
+                min_index = input_set[i]
+        return min_cost
+
+    def MIN(self, current_node, input_set, set_size):
+        if set_size == 0:
+            return self.weight[current_node][0]
+        min_cost = self.INF
+        min_index = 0
+        set_to_be_passed = [0 for _ in range(self.n - 1)]
+
+        for i in range(set_size):
+            k = 0
+            for j in range(set_size):
+                if input_set[i] != input_set[j]:
+                    set_to_be_passed[k] = input_set[j]
+                    k += 1
+            temp = self.COST(input_set[i], set_to_be_passed, set_size - 1)
+            if (self.weight[current_node][input_set[i]] + temp) < min_cost:
+                min_cost = self.weight[current_node][input_set[i]] + temp
+                min_index = input_set[i]
+        return min_index
+
+    def eval(self):
+        self.input_weight()
+        dummy_set = [i for i in range(1, self.n)]
+        self.finalCost = self.COST(0, dummy_set, self.n - 1)
+        self.constructTour()
+
+    def constructTour(self):
+        previous_set = [i for i in range(1, self.n)]
+        next_set = []
+        for i in range(1, self.n - 1):
+            next_set.append(0)
+        set_size = self.n - 1
+        self.tour[0] = self.MIN(0, previous_set, set_size)
+        for i in range(1, self.n - 1):
+            k = 0
+            for j in range(set_size):
+                if self.tour[i - 1] != previous_set[j]:
+                    next_set[k] = previous_set[j]
+                    k += 1
+            set_size -= 1
+            self.tour[i] = self.MIN(self.tour[i - 1], next_set, set_size)
+            for j in range(set_size):
+                previous_set[j] = next_set[j]
+        self.display()
+
+    def display(self):
+        print()
+        print("The tour is 1-", end="")
+        for i in range(self.n - 1):
+            print(f"{self.tour[i] + 1}-", end="")
+        print("1")
+        print("The final cost is", self.finalCost)
+
+
+if __name__ == "__main__":
+    obj = TSP()
