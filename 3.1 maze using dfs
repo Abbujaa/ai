@@ -1,0 +1,60 @@
+import random
+
+def generate_maze(height, width):
+    maze = [[1 for _ in range(width)] for _ in range(height)]
+
+    rand = random.Random()
+
+    r = rand.randint(0, height - 1)
+    while r % 2 == 0:
+        r = rand.randint(0, height - 1)
+
+    c = rand.randint(0, width - 1)
+    while c % 2 == 0:
+        c = rand.randint(0, width - 1)
+
+    maze[r][c] = 0
+    recursion(maze, r, c)
+
+    return maze
+
+def recursion(maze, r, c):
+    rand_dirs = generate_random_directions()
+
+    for direction in rand_dirs:
+        if direction == 1:  # Up
+            if r - 2 >= 0:
+                if maze[r - 2][c] != 0:
+                    maze[r - 2][c] = 0
+                    maze[r - 1][c] = 0
+                    recursion(maze, r - 2, c)
+        elif direction == 2:  # Right
+            if c + 2 < len(maze[0]):
+                if maze[r][c + 2] != 0:
+                    maze[r][c + 2] = 0
+                    maze[r][c + 1] = 0
+                    recursion(maze, r, c + 2)
+        elif direction == 3:  # Down
+            if r + 2 < len(maze):
+                if maze[r + 2][c] != 0:
+                    maze[r + 2][c] = 0
+                    maze[r + 1][c] = 0
+                    recursion(maze, r + 2, c)
+        elif direction == 4:  # Left
+            if c - 2 >= 0:
+                if maze[r][c - 2] != 0:
+                    maze[r][c - 2] = 0
+                    maze[r][c - 1] = 0
+                    recursion(maze, r, c - 2)
+
+def generate_random_directions():
+    randoms = [1, 2, 3, 4]
+    random.shuffle(randoms)
+    return randoms
+
+# Example usage:
+height = 10  # Replace with your desired height
+width = 10   # Replace with your desired width
+maze = generate_maze(height, width)
+for row in maze:
+    print(" ".join(map(str, row)))
